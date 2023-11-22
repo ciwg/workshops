@@ -1,0 +1,20 @@
+569032  2023/11/20 17:27:13 grok init
+569033  2023/11/20 17:27:17 grok models
+569034  2023/11/20 17:27:23 echo write a fibbonaci series generator in python     | grok msg "you are an expert python developer."     | grok msg "you are an expert Go developer.  translate the provided code to Go." 
+569035  2023/11/20 17:41:03 ls
+569036  2023/11/20 17:41:05 ls -la
+569037  2023/11/20 17:41:24 echo write a fibbonaci series generator in python     | grok msg "you are an expert python developer."     > fib.py
+569038  2023/11/20 17:41:38 cat fib.py
+569039  2023/11/20 17:42:04 cat fib.py | grok msg "you are an expert Go developer.  translate he provided code to Go." > fib.go
+569040  2023/11/20 17:42:11 cat fib.py | grok msg "you are an expert Go developer.  translate the provided code to Go." > fib.go
+569041  2023/11/20 17:43:48 cat fib.go
+569042  2023/11/20 18:26:33 echo write a fibbonaci series generator in python     | grok msg "you are an expert python developer."     | grok msg "you are an expert Go developer.  translate the provided code to Go." 
+569043  2023/11/20 18:28:40 echo write a fibbonaci series generator in python     | grok msg "you are an expert python developer."     | grok msg "you are an expert Go developer.  translate the provided code to Go."  | grok msg "you are an expert Go developer.  use the provided code snippets to generate a single main.go."
+569044  2023/11/20 18:29:57 echo write a simple example program in python     | grok msg "you are an expert python developer."     | grok msg "you are an expert Go developer.  translate the provided code to a single main.go file."
+569045  2023/11/20 18:31:05 echo "i need code that will total all of the 'qty' columns in a CSV file."     | grok msg "you are an expert python developer."     | grok msg "you are an expert Go developer.  translate the provided code to a single main.go file."
+569046  2023/11/20 18:31:33 echo "i need code that will total all of the values in the 'qty' column of a CSV file."     | grok msg "you are an expert python developer."     | grok msg "you are an expert Go developer.  translate the provided code to a single main.go file."
+569047  2023/11/20 18:34:03 cat > csv1.go
+569048  2023/11/20 18:35:00 cat csv1.go | grok msg "you are a senior Go developer.  review the provided code."
+569049  2023/11/20 18:37:13 cat csv1.go | grok msg "you are a senior Go developer. make the following improvements in the provided code, producing a new main.go file: $(cat csv1.go)"
+569050  2023/11/20 18:38:26 history | tail -20
+569051  2023/11/20 18:38:35 history | tail -20 > history

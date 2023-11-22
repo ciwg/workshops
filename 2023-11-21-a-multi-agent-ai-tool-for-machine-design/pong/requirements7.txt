@@ -1,0 +1,16 @@
+Here are the requirements based off the provided Python code for the Pong game:
+
+1. The game development platform, Pygame, is used to develop the Pong game. Hence, Pygame has to be installed.
+2. The game supports two players. Player 1 uses 'w' and 's' keys to move their paddle up and down while, Player 2 uses 'UP' and 'DOWN' keys.
+3. The dimensions of the pong game screen is 600x400 pixels.
+4. The game has a specified constant for the Paddle and Ball sizes; a ball radius of 20 pixels, paddle width of 15 pixels and a paddle height of 80 pixels.
+5. The game has a set speed for the paddles and the ball. The paddle moves at a speed of 4 pixels per frame, and the ball moves at a speed of 2 pixels per frame. 
+6. The ball changes direction when it hits a paddle or the top and bottom edges of the game screen.
+7. The paddle moves vertically and is restricted by the top and bottom edge of the game screen.
+8. Each player gains a point when the opponent misses the ball. The ball resets to the center of the screen after each point scored.
+9. The game runs at 60 frames per second, ensuring constant speed on all machines it runs on.
+10. The game objects and scoring information are rendered at every frame; there is immediate feedback after each action.
+11. The game ends when the user closes the application window.
+12. A quit option is in place, closing the application when activated. 
+13. The game is fully functional, including the main game loop, movement controls for paddles, ball speed and direction, collision detection, scoring system and rendering of the game objects.
+14. The color scheme is black and white: the game background is black, and the game objects (ball and paddles) are white.

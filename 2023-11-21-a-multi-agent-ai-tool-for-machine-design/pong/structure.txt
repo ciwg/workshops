@@ -1,0 +1,60 @@
+Creating a pong game with Pygame includes initiating the game, creating the game objects (paddles and ball) and a game loop that controls how the game will run. Below is a basic outline of the game:
+
+```python
+import pygame
+from pygame.locals import *
+
+# Initiate Pygame
+pygame.init()
+
+# Set up some constants
+WIDTH = 600
+HEIGHT = 400
+BALL_RADIUS = 20
+PADDLE_WIDTH = 15
+PADDLE_HEIGHT = 80
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# Create the ball and paddles 
+ball = pygame.Rect(WIDTH // 2, HEIGHT // 2, BALL_RADIUS, BALL_RADIUS)
+paddle1 = pygame.Rect(PADDLE_WIDTH, HEIGHT // 2, PADDLE_WIDTH, PADDLE_HEIGHT)
+paddle2 = pygame.Rect(WIDTH - (2 * PADDLE_WIDTH), HEIGHT // 2, PADDLE_WIDTH, PADDLE_HEIGHT)
+
+# Control the initial direction the ball will travel in
+ball_dx = 1
+ball_dy = 1
+
+# Create the game window
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            running = False
+       
+    # Add Continuous paddle controls here 
+   
+    # Update Ball Movement
+    ball.left += ball_dx
+    ball.top += ball_dy
+
+    if ball.left <= 0 or ball.right >= WIDTH:
+        ball_dx *= -1
+    if ball.top <= 0 or ball.bottom >= HEIGHT:
+        ball_dy *= -1
+
+    # Update Game Display
+    screen.fill(BLACK)
+    for entity in [ball, paddle1, paddle2]:
+        pygame.draw.rect(screen, WHITE, entity)
+
+    pygame.display.flip()
+    pygame.time.delay(30)
+
+pygame.quit()
+```
+
+This code will run a basic Pong game where the ball bounces off the top and bottom of the screen and the left and right ends. You will need to add control mechanism for the paddles, collision detection between the paddles and the ball, and scoring for a complete game.

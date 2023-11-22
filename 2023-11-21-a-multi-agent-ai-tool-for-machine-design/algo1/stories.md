@@ -1,0 +1,5 @@
+- as a developer i want a bash script that will help me evolve code using the grok msg ai tool
+- 
+- 
+- - as a developer, i understand that the 'grok' command exists, and has a 'msg' subcommand that will do the job
+- as a user, i do not want the user consent step, and i will always install the 'grok' command before running the scrip
