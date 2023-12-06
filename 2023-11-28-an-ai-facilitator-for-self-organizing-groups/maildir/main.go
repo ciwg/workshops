@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -22,11 +23,18 @@ import (
 
 var sysMsgSummarize = "you are %s.  rewrite the given mbox messages, reducing the number of messages without losing information.  your answer must be in the form of a series of properly-formatted mbox messages as shown.  include no markdown wrapper."
 
-var sysMsgSend = "you are %s. take action on your inbox content to accomplish the goal quickly with minimal administrative overhead, then send a message to whoever should act next.  you can invite new participants into the team by emailing them.  any file you create must be included as a text/plain MIME attachment.  your answer must be in the form of a properly-formatted rfc822 email message as shown.  include no markdown wrappers."
+var sysMsgSend = "you are %s.  the requirements are below.  do what you can to meet them, then send a message to whoever should act next.  you can invite new participants into the team by emailing them.  your answer must be in the form of a MIME-formatted email message with any file attached as a valid text/plain MIME attachment with no encoding.  include no markdown wrappers.\n\n%s"
 
 const TokenLimit = 8192.0 // XXX get from grokker model
 
+var Requirements string
+
 func main() {
+	// load requirements
+	buf, err := ioutil.ReadFile("requirements.md")
+	Ck(err)
+	Requirements = string(buf)
+
 	// get subcommand
 	Assert(len(os.Args) > 1, "missing subcommand")
 	cmd := os.Args[1]
@@ -61,11 +69,10 @@ func main() {
 	case "summarize":
 		// summarize and replace the given user's inbox/{status}
 		homedir := os.Args[2]
-		status := os.Args[3]
-		tokenLimit, err := strconv.Atoi(os.Args[4])
+		ratio, err := strconv.ParseFloat(os.Args[3], 64)
 		Ck(err)
 		// summarize the inbox
-		_, err = summarizeInbox(homedir, status, tokenLimit)
+		_, err = summarizeInbox(homedir, ratio)
 		Ck(err)
 	case "readMail":
 		// read, process, and respond to all new messages for the given user
@@ -188,7 +195,10 @@ func send(out io.Writer, from string, to, cc []string, subject string, body []by
 func distribute(in io.Reader) (recipients []string) {
 	// read the message
 	msg, err := email.NewEmailFromReader(in)
-	Ck(err)
+	if err != nil {
+		Fpf(os.Stderr, "error reading message: %s\n", err.Error())
+		return
+	}
 
 	// show the message content on stderr
 	buf, err := msg.Bytes()
@@ -203,7 +213,11 @@ func distribute(in io.Reader) (recipients []string) {
 	rawRecipients = append(rawRecipients, msg.Cc...)
 	// extract the email address from each recipient
 	for _, rawRecipient := range rawRecipients {
-		recipient := extractEmail(rawRecipient)
+		recipient, err := extractEmail(rawRecipient)
+		if err != nil {
+			Fpf(os.Stderr, err.Error())
+			continue
+		}
 		recipients = append(recipients, recipient)
 	}
 
@@ -215,24 +229,34 @@ func distribute(in io.Reader) (recipients []string) {
 	}
 
 	// put a copy in the sender's inbox/cur
-	sender := extractEmail(msg.From)
-	mdmsg, err := deliver(sender, msg)
-	Ck(err)
-	// move the message from inbox/new to inbox/cur
-	key, err := mdmsg.Process()
-	Ck(err, "failed to move message %s", key)
+	sender, err := extractEmail(msg.From)
+	if err != nil {
+		Fpf(os.Stderr, err.Error())
+	} else {
+		mdmsg, err := deliver(sender, msg)
+		Ck(err)
+		// move the message from inbox/new to inbox/cur
+		key, err := mdmsg.Process()
+		Ck(err, "failed to move message %s", key)
+
+		// detach any files
+		err = detachFiles(sender, mdmsg)
+		Ck(err)
+	}
 
 	return
 }
 
 // extractEmail extracts the email address from an email address string
-func extractEmail(in string) (out string) {
+func extractEmail(in string) (out string, err error) {
 	// use a regex to extract the email address
 	// - the email address must include @
 	// - the email address may or may not be enclosed in <>
 	re := regexp.MustCompile(`([\w\-\.]+\@[\w\-\.]+)`)
 	m := re.FindStringSubmatch(in)
-	Assert(len(m) == 2, "invalid address: %s", in)
+	if len(m) != 2 {
+		return "", fmt.Errorf("invalid address: %s", in)
+	}
 	out = m[1]
 	return
 }
@@ -281,20 +305,24 @@ func readMail(homedir string) (err error) {
 	}
 	sort.Strings(newkeys)
 
-	// detach files from messages
-	for _, key := range newkeys {
-		mdmsg := newMap[key]
-		err = detachFiles(homedir, mdmsg)
-		Ck(err)
-	}
-
 	// summarize inbox/new to reduce redundancy
-	_, err = summarizeInbox(homedir, "new", TokenLimit/2.0)
+	_, err = summarizeInbox(homedir, 0.5)
 
-	// process each message
-	for _, key := range newkeys {
-		msg := newMap[key]
-		process(homedir, inbox, msg)
+	// XXX don't return mboxNew above, do re-read from inbox/new in
+	// respond()
+
+	// respond to entire mbox with one message
+	// create a pipe from respond to distribute
+	pr, pw := io.Pipe()
+	go respond(homedir, pw)
+	// send the response
+	_ = distribute(pr)
+
+	// move old messages from inbox/new to inbox/cur
+	newMap, err = inbox.List("new")
+	for _, mdmsg := range newMap {
+		_, err = mdmsg.Process()
+		Ck(err)
 	}
 
 	return
@@ -329,9 +357,10 @@ func detachFiles(homedir string, mdmsg *lib.Message) (err error) {
 	return
 }
 
+/*
 // process processes a message for a single recipient. It moves the
 // message from inbox/new to inbox/cur.
-func process(homedir string, inbox *maildir.Maildir, mdmsg *lib.Message) (err error) {
+func XXXprocess(homedir string, inbox *maildir.Maildir, mdmsg *lib.Message) (err error) {
 	defer Return(&err)
 
 	// get the message from the maildir
@@ -358,44 +387,65 @@ func process(homedir string, inbox *maildir.Maildir, mdmsg *lib.Message) (err er
 
 	return
 }
+*/
 
-// respond responds to msg.  It looks in the cur inbox, considers msg,
+// respond responds to msg.  It looks in the given mboxMem,
 // creates a new message, and sends it to the given io.Writer.
-func respond(homedir string, msg *email.Email, out io.Writer) (err error) {
+func respond(homedir string, out io.Writer) (err error) {
 	defer Return(&err)
 
-	Fpf(os.Stderr, "%s responding to message: %s\n", homedir, msg.Subject)
+	Fpf(os.Stderr, "%s responding\n", homedir)
 
-	// XXX move grokker setup from cli.go to api.go so we can call
-	// functions in api.go directly instead of going through Cli()
-	config := grokker.NewCliConfig()
-
-	// get msg token count
-	msgBuf, err := msg.Bytes()
+	// read the messages in the inbox into mboxIn
+	inboxPath := filepath.Join(homedir, "inbox")
+	inbox := maildir.NewMaildir(inboxPath)
+	curMap, err := inbox.List("new")
 	Ck(err)
-	msgTxt := string(msgBuf)
-	tcMsg := tokenCount(msgTxt)
+	// convert the map to a sorted slice of keys
+	var curkeys []string
+	for key := range curMap {
+		curkeys = append(curkeys, key)
+	}
+	sort.Strings(curkeys)
+	Debug("curkeys=%v", curkeys)
+	// collect the messages into mbox format
+	mboxIn := &mboxMem{}
+	for _, key := range curkeys {
+		mdmsg := curMap[key]
+		msgTxt, err := mdmsg.GetData()
+		Ck(err)
+		msg, err := email.NewEmailFromReader(strings.NewReader(msgTxt))
+		Ck(err)
+		err = mboxIn.append(msg)
+		Ck(err)
+	}
 
-	// calculate the maximum token count for the summary
-	// - summaryTokenLimit + tcMsg <= TokenLimit/2
-	summaryTokenLimit := TokenLimit/2.0 - tcMsg
-
-	// summarize inbox into an in-memory mbox
-	mbox, err := summarizeInbox(homedir, "cur", summaryTokenLimit)
+	msgs, err := mboxIn.messages()
 	Ck(err)
+	if len(msgs) == 0 {
+		Fpf(os.Stderr, "%s no messages to respond to -- sending presence message\n", homedir)
+		subject := Spf("%s is available", homedir)
+		send(out, homedir, []string{"facilitator@example.com"}, nil, subject, []byte("How can I help?"))
+	} else {
+		for _, msg := range msgs {
+			Fpf(os.Stderr, "%s responding to message: %s\n", homedir, msg.Subject)
+		}
 
-	// add msg to the mbox
-	err = mbox.append(msg)
-	Ck(err)
+		// XXX move grokker setup from cli.go to api.go so we can call
+		// functions in api.go directly instead of going through Cli()
+		config := grokker.NewCliConfig()
 
-	// ask OpenAI to create a new message
-	config.Stdin = strings.NewReader(mbox.String())
-	config.Stdout = out
-	sysmsg := Spf(sysMsgSend, extractEmail(homedir))
-	args := []string{"msg", sysmsg}
-	Fpf(os.Stderr, "grokker args=%v\n", args)
-	_, err = grokker.Cli(args, config)
-	Ck(err)
+		// ask OpenAI to create a new message
+		config.Stdin = strings.NewReader(mboxIn.String())
+		config.Stdout = out
+		user, err := extractEmail(homedir)
+		Ck(err)
+		sysmsg := Spf(sysMsgSend, user, Requirements)
+		args := []string{"msg", sysmsg}
+		// Fpf(os.Stderr, "grokker args=%v\n", args)
+		_, err = grokker.Cli(args, config)
+		Ck(err)
+	}
 
 	// close the output
 	if closer, ok := out.(io.Closer); ok {
@@ -408,13 +458,13 @@ func respond(homedir string, msg *email.Email, out io.Writer) (err error) {
 
 // summarizeInbox summarizes the messages in the given user's
 // inbox/{status}.  It returns a string containing the summary.
-func summarizeInbox(homedir, status string, tokenLimit int) (mbox *mboxMem, err error) {
+func summarizeInbox(homedir string, ratio float64) (mboxOut *mboxMem, err error) {
 	defer Return(&err)
 
 	// read the messages in the inbox
 	inboxPath := filepath.Join(homedir, "inbox")
 	inbox := maildir.NewMaildir(inboxPath)
-	curMap, err := inbox.List(status)
+	curMap, err := inbox.List("new")
 	Ck(err)
 
 	// convert the map to a sorted slice of keys
@@ -426,50 +476,48 @@ func summarizeInbox(homedir, status string, tokenLimit int) (mbox *mboxMem, err 
 	Debug("curkeys=%v", curkeys)
 
 	// collect the messages into mbox format
-	mbox = &mboxMem{}
+	mboxOut = &mboxMem{}
 	for _, key := range curkeys {
 		mdmsg := curMap[key]
 		msgTxt, err := mdmsg.GetData()
 		Ck(err)
 		msg, err := email.NewEmailFromReader(strings.NewReader(msgTxt))
 		Ck(err)
-		err = mbox.append(msg)
+		err = mboxOut.append(msg)
 		Ck(err)
 	}
-	Debug("mbox len=%d", len(mbox.String()))
+	Debug("mbox len=%d", len(mboxOut.String()))
 
 	// keep summarizing until summary token count is less than
-	// tokenLimit
-	mbox, err = summarizeUntil(homedir, status, mbox, tokenLimit)
+	// tokenLimit/2
+	mboxOut, err = summarizeUntil(homedir, mboxOut, ratio)
 	Ck(err)
 
 	// if we didn't replace the mbox, we're done
-	if !mbox.replaced {
+	if !mboxOut.replaced {
 		Debug("mbox not replaced")
 		return
 	}
 	Debug("mbox replaced")
 
 	// put the summary mbox messages into inbox/new
-	msgs, err := mbox.messages()
+	msgs, err := mboxOut.messages()
 	Ck(err)
+	Fpf(os.Stderr, "%s has %d messages\n", homedir, len(msgs))
 	for _, msg := range msgs {
 		buf, err := msg.Bytes()
 		Ck(err)
 		// put msg in inbox/new
-		mdmsg, err := inbox.Add(string(buf))
+		_, err = inbox.Add(string(buf))
 		Ck(err)
-		if status == "cur" {
-			// move msg from inbox/new to inbox/cur
-			_, err = mdmsg.Process()
-			Ck(err)
-		}
+		Fpf(os.Stderr, "%s added message to inbox/new: %s\n", homedir, msg.Subject)
 	}
 
-	// move old messages from inbox to archive/new
+	// move old messages from inbox/new to inbox/cur
 	for _, key := range curkeys {
 		mdmsg := curMap[key]
-		err = moveToArchive(homedir, mdmsg)
+		// err = moveToArchive(homedir, mdmsg)
+		_, err = mdmsg.Process()
 		Ck(err)
 	}
 
@@ -479,27 +527,60 @@ func summarizeInbox(homedir, status string, tokenLimit int) (mbox *mboxMem, err 
 // summarizeUntil recursively summarizes the given mbox until the
 // token count is less than tokenLimit.  It returns the resulting
 // mbox.
-func summarizeUntil(homedir, status string, mbox *mboxMem, tokenLimit int) (*mboxMem, error) {
-	// if mbox is less than tokenLimit, return mbox
-	tcMbox := tokenCount(mbox.String())
+func summarizeUntil(homedir string, mboxIn *mboxMem, ratio float64) (*mboxMem, error) {
+	// if mbox is less than tokenLimit/2, return mbox
+	tcMbox := tokenCount(mboxIn.String())
 	Debug("tcMbox=%d", tcMbox)
-	if tcMbox < tokenLimit {
-		return mbox, nil
+	if float64(tcMbox) < float64(TokenLimit)*ratio {
+		Fpf(os.Stderr, "%s no more summarizing needed, token count=%d\n", homedir, tcMbox)
+		return mboxIn, nil
 	}
+	Fpf(os.Stderr, "%s summarizing, token count=%d\n", homedir, tcMbox)
+	// if mbox is greater than TokenLimit, split it in half and recurse
+	if tcMbox > TokenLimit {
+		// split mbox in half
+		mbox1 := &mboxMem{}
+		mbox2 := &mboxMem{}
+		msgs, err := mboxIn.messages()
+		Ck(err)
+		start2 := len(msgs) / 2
+		for i := 0; i < start2; i++ {
+			err = mbox1.append(msgs[i])
+			Ck(err)
+		}
+		for i := start2; i < len(msgs); i++ {
+			err = mbox2.append(msgs[i])
+			Ck(err)
+		}
+		// summarize each half
+		mbox1, err = summarizeUntil(homedir, mbox1, 0.25)
+		Ck(err)
+		mbox2, err = summarizeUntil(homedir, mbox2, 0.25)
+		Ck(err)
+		// combine the summaries
+		mboxOut := &mboxMem{}
+		mboxOut.buf.Write(mbox1.buf.Bytes())
+		mboxOut.buf.Write(mbox2.buf.Bytes())
+		return summarizeUntil(homedir, mboxOut, 0.5)
+	}
+
 	// otherwise, use grokker to summarize and recurse
-	Fpf(os.Stderr, "%s summarizing inbox/%s, token count=%d\n", homedir, status, tcMbox)
 	config := grokker.NewCliConfig()
-	config.Stdin = strings.NewReader(mbox.String())
+	config.Stdin = strings.NewReader(mboxIn.String())
 	config.Stdout = bytes.NewBuffer(nil)
-	args := []string{"msg", Spf(sysMsgSummarize, extractEmail(homedir))}
-	Fpf(os.Stderr, "grokker args=%v\n", args)
-	_, err := grokker.Cli(args, config)
+	user, err := extractEmail(homedir)
+	Ck(err)
+	args := []string{"msg", Spf(sysMsgSummarize, user)}
+	// Fpf(os.Stderr, "grokker args=%v\n", args)
+	Fpf(os.Stderr, "%s summarizing, waiting for OpenAI...\n", homedir)
+	_, err = grokker.Cli(args, config)
 	if err != nil {
 		return nil, err
 	}
 	summary := config.Stdout.(*bytes.Buffer).String()
-	mbox.replaceWith(summary)
-	return summarizeUntil(homedir, status, mbox, tokenLimit)
+	Fpf(os.Stderr, "%s summarizing done, token count=%d\n", homedir, tokenCount(summary))
+	mboxIn.replaceWith(summary)
+	return summarizeUntil(homedir, mboxIn, 0.5)
 }
 
 // tokenCount returns the number of tokens in the given string.
@@ -528,17 +609,17 @@ type mboxMem struct {
 // append appends the given message to the in-memory mbox
 func (m *mboxMem) append(msg *email.Email) (err error) {
 	defer Return(&err)
-	mbox := mbox.NewWriter(&m.buf)
+	w := mbox.NewWriter(&m.buf)
 	Ck(err)
 	// write the message to the mbox
-	msgWriter, err := mbox.CreateMessage(msg.From, time.Now())
+	msgWriter, err := w.CreateMessage(msg.From, time.Now())
 	Ck(err)
 	msgbuf, err := msg.Bytes()
 	Ck(err)
 	_, err = msgWriter.Write(msgbuf)
 	Ck(err)
-	// close the mbox file
-	err = mbox.Close()
+	// close the writer
+	err = w.Close()
 	Ck(err)
 	return
 }
@@ -552,10 +633,10 @@ func (m *mboxMem) String() string {
 func (m *mboxMem) messages() (msgs []*email.Email, err error) {
 	defer Return(&err)
 	// create an mbox reader
-	mbox := mbox.NewReader(&m.buf)
+	r := mbox.NewReader(&m.buf)
 	// read each message
 	for {
-		msg, err := mbox.NextMessage()
+		msg, err := r.NextMessage()
 		if err == io.EOF {
 			break
 		}
