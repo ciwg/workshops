@@ -1,0 +1,30 @@
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+}

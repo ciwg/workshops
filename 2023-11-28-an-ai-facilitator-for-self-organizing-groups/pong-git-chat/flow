@@ -1,0 +1,2588 @@
+{"Sysmsg":"You are a bash developer who can write graphviz .dot files.","Version":"3.0.2"}
+USER:
+write a graphviz dataflow.dot file illustrating the dataflow between agents via git
+
+File: setup.sh
+```#!/bin/bash
+
+set -ex
+
+# clean
+rm -rf origin.git agents control
+
+. ./config.sh
+
+# set up git
+git init --bare origin.git
+
+# set up control repo
+git clone origin.git control
+cd control
+# put requirements on main branch
+cp ../requirements.md .
+# touch outputs
+for output in ${agent_outputs[@]}
+do
+    touch $output
+done
+git add *
+git commit -m "set up control repo"
+git push
+grok init
+grok add *
+cd -
+
+# set up agents
+mkdir agents
+cd agents
+for agent in $agents
+do 
+    git clone ../origin.git $agent
+    cd $agent
+    git checkout -b $agent/main
+    git push --set-upstream origin $agent/main
+    grok init
+    grok add *
+    cd -
+done
+cd -
+
+
+
+```
+
+
+File: runall.sh
+```#!/bin/bash
+
+term="/usr/bin/uxterm -ms red -bg black -fg white -ls -sb -sl 9999"
+
+agent=$1
+
+. ./config.sh
+
+if [ -n "$agent" ]
+then
+    # run a single agent
+    $term -e "./cycle.sh $agent" &
+    exit 0
+else
+    # run all agents, each in their own xterm
+    for agent in $agents
+    do
+        $term -e "./cycle.sh $agent" &
+    done
+fi
+
+```
+
+
+File: cycle.sh
+```#!/bin/bash
+
+# go to sleep if the -e flag causes us to exit
+trap "sleep 99999" ERR
+
+set -ex
+
+. ./config.sh
+
+# get absolute path to fixdiff
+abspath() {
+    echo $(cd $(dirname $1); pwd)/$(basename $1)
+}
+fixdiff=$(abspath ../fixdiff/fixdiff)
+
+merge() {
+    agent=$1
+    other=$2
+    cd $agent
+    pwd
+
+    git fetch
+
+    # merge, preferring other's changes
+    git merge --no-commit -Xtheirs $other
+
+    # save the merge diff and undo the merge
+    git diff --staged > .diff
+    if ! git merge --abort 
+    then 
+        # we will also get here if the merge was a fast-forward
+        git push
+        cd -
+        return 0
+    fi
+
+    # check sanity
+    cat .diff | grok chat .chat -s "You are a $agent.  Do the given changes make sense?  Your answer must match the following regex: '^answer=(yes|no)$'" > .answer
+
+    # if answer=yes then do the merge for real
+    if [ $(cat .answer) == "answer=yes" ]
+    then
+        git merge -Xtheirs -m "merge with $other" $other
+    fi
+    git push
+
+    # update grokker
+    grok add *
+
+    cd -
+}
+
+edit() {
+    agent=$1
+    cd $agent
+    pwd
+
+    # get the last commit we looked at
+    if [ -f .lastcommit ]
+    then
+        lastcommit=$(cat .lastcommit)
+    else
+        # start at the beginning of time
+        lastcommit=$(git rev-list --max-parents=0 HEAD)
+    fi
+    # get the files that have changed since then
+    git log --pretty=format: --name-only $lastcommit..HEAD > .changed
+
+    # if there are no changes, then return
+    if [ ! -s .changed ]
+    then
+        cd -
+        return 0
+    fi
+
+    inputs=$(cat .changed)
+    # remove blank lines
+    inputs=$(echo "$inputs" | sed '/^$/d')
+    # replace newlines with commas
+    inputs=$(echo "$inputs" | tr '\n' ',' | sed 's/,$//')
+    # get output for this agent from agent_outputs array in config.sh
+    output=${agent_outputs[$agent]}
+
+    while true
+    do
+        if time grok chat .chat -s "You are a $agent." --input-files="$inputs" --output-files="$output" -m "Edit $output based on the changes in $inputs."
+        then
+            break
+        fi
+        echo retrying...
+    done
+
+    # update grokker
+    grok add *
+
+    # commit
+    git add *
+    grok commit > .commitmsg
+    git commit -F .commitmsg
+    git push
+
+    # save the commit we just looked at
+    git rev-parse HEAD > .lastcommit
+
+    cd -
+}
+
+
+agent=$1
+
+cd agents
+while true
+do
+    # merge with main
+    merge $agent origin/main
+
+    # merge with other branches
+    for other in *
+    do
+        if [ $agent == $other ]
+        then
+            continue
+        fi
+        merge $agent origin/$other/main
+    done
+
+    # make a change
+    edit $agent
+    sleep 10
+done
+
+
+```
+
+
+File: config.sh
+```
+agents="facilitator pygame-developer tester user"
+# associate outputs with agents
+declare -A agent_outputs
+agent_outputs[user]="requirements.md"
+agent_outputs[facilitator]="tasks.md"
+agent_outputs[pygame-developer]="pong.py"
+agent_outputs[tester]="test-results.md"
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer"];
+    "Agent: Tester" [label="Agent: Tester"];
+    "Agent: User" [label="Agent: User"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat"];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat"];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat"];
+    "Agent: Tester" -> "Agent: User" [label="grok chat"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's a good start.  show the output filenames from each agent.
+
+File: setup.sh
+```#!/bin/bash
+
+set -ex
+
+# clean
+rm -rf origin.git agents control
+
+. ./config.sh
+
+# set up git
+git init --bare origin.git
+
+# set up control repo
+git clone origin.git control
+cd control
+# put requirements on main branch
+cp ../requirements.md .
+# touch outputs
+for output in ${agent_outputs[@]}
+do
+    touch $output
+done
+git add *
+git commit -m "set up control repo"
+git push
+grok init
+grok add *
+cd -
+
+# set up agents
+mkdir agents
+cd agents
+for agent in $agents
+do 
+    git clone ../origin.git $agent
+    cd $agent
+    git checkout -b $agent/main
+    git push --set-upstream origin $agent/main
+    grok init
+    grok add *
+    cd -
+done
+cd -
+
+
+
+```
+
+
+File: runall.sh
+```#!/bin/bash
+
+term="/usr/bin/uxterm -ms red -bg black -fg white -ls -sb -sl 9999"
+
+agent=$1
+
+. ./config.sh
+
+if [ -n "$agent" ]
+then
+    # run a single agent
+    $term -e "./cycle.sh $agent" &
+    exit 0
+else
+    # run all agents, each in their own xterm
+    for agent in $agents
+    do
+        $term -e "./cycle.sh $agent" &
+    done
+fi
+
+```
+
+
+File: cycle.sh
+```#!/bin/bash
+
+# go to sleep if the -e flag causes us to exit
+trap "sleep 99999" ERR
+
+set -ex
+
+. ./config.sh
+
+# get absolute path to fixdiff
+abspath() {
+    echo $(cd $(dirname $1); pwd)/$(basename $1)
+}
+fixdiff=$(abspath ../fixdiff/fixdiff)
+
+merge() {
+    agent=$1
+    other=$2
+    cd $agent
+    pwd
+
+    git fetch
+
+    # merge, preferring other's changes
+    git merge --no-commit -Xtheirs $other
+
+    # save the merge diff and undo the merge
+    git diff --staged > .diff
+    if ! git merge --abort 
+    then 
+        # we will also get here if the merge was a fast-forward
+        git push
+        cd -
+        return 0
+    fi
+
+    # check sanity
+    cat .diff | grok chat .chat -s "You are a $agent.  Do the given changes make sense?  Your answer must match the following regex: '^answer=(yes|no)$'" > .answer
+
+    # if answer=yes then do the merge for real
+    if [ $(cat .answer) == "answer=yes" ]
+    then
+        git merge -Xtheirs -m "merge with $other" $other
+    fi
+    git push
+
+    # update grokker
+    grok add *
+
+    cd -
+}
+
+edit() {
+    agent=$1
+    cd $agent
+    pwd
+
+    # get the last commit we looked at
+    if [ -f .lastcommit ]
+    then
+        lastcommit=$(cat .lastcommit)
+    else
+        # start at the beginning of time
+        lastcommit=$(git rev-list --max-parents=0 HEAD)
+    fi
+    # get the files that have changed since then
+    git log --pretty=format: --name-only $lastcommit..HEAD > .changed
+
+    # if there are no changes, then return
+    if [ ! -s .changed ]
+    then
+        cd -
+        return 0
+    fi
+
+    inputs=$(cat .changed)
+    # remove blank lines
+    inputs=$(echo "$inputs" | sed '/^$/d')
+    # replace newlines with commas
+    inputs=$(echo "$inputs" | tr '\n' ',' | sed 's/,$//')
+    # get output for this agent from agent_outputs array in config.sh
+    output=${agent_outputs[$agent]}
+
+    while true
+    do
+        if time grok chat .chat -s "You are a $agent." --input-files="$inputs" --output-files="$output" -m "Edit $output based on the changes in $inputs."
+        then
+            break
+        fi
+        echo retrying...
+    done
+
+    # update grokker
+    grok add *
+
+    # commit
+    git add *
+    grok commit > .commitmsg
+    git commit -F .commitmsg
+    git push
+
+    # save the commit we just looked at
+    git rev-parse HEAD > .lastcommit
+
+    cd -
+}
+
+
+agent=$1
+
+cd agents
+while true
+do
+    # merge with main
+    merge $agent origin/main
+
+    # merge with other branches
+    for other in *
+    do
+        if [ $agent == $other ]
+        then
+            continue
+        fi
+        merge $agent origin/$other/main
+    done
+
+    # make a change
+    edit $agent
+    sleep 10
+done
+
+
+```
+
+
+File: config.sh
+```
+agents="facilitator pygame-developer tester user"
+# associate outputs with agents
+declare -A agent_outputs
+agent_outputs[user]="requirements.md"
+agent_outputs[facilitator]="tasks.md"
+agent_outputs[pygame-developer]="pong.py"
+agent_outputs[tester]="test-results.md"
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat"];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat"];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat"];
+    "Agent: Tester" -> "Agent: User" [label="grok chat"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good, but make sure you match the regex i gave you.  now make the graph edges have an arrow on both ends.
+
+File: setup.sh
+```#!/bin/bash
+
+set -ex
+
+# clean
+rm -rf origin.git agents control
+
+. ./config.sh
+
+# set up git
+git init --bare origin.git
+
+# set up control repo
+git clone origin.git control
+cd control
+# put requirements on main branch
+cp ../requirements.md .
+# touch outputs
+for output in ${agent_outputs[@]}
+do
+    touch $output
+done
+git add *
+git commit -m "set up control repo"
+git push
+grok init
+grok add *
+cd -
+
+# set up agents
+mkdir agents
+cd agents
+for agent in $agents
+do 
+    git clone ../origin.git $agent
+    cd $agent
+    git checkout -b $agent/main
+    git push --set-upstream origin $agent/main
+    grok init
+    grok add *
+    cd -
+done
+cd -
+
+
+
+```
+
+
+File: runall.sh
+```#!/bin/bash
+
+term="/usr/bin/uxterm -ms red -bg black -fg white -ls -sb -sl 9999"
+
+agent=$1
+
+. ./config.sh
+
+if [ -n "$agent" ]
+then
+    # run a single agent
+    $term -e "./cycle.sh $agent" &
+    exit 0
+else
+    # run all agents, each in their own xterm
+    for agent in $agents
+    do
+        $term -e "./cycle.sh $agent" &
+    done
+fi
+
+```
+
+
+File: cycle.sh
+```#!/bin/bash
+
+# go to sleep if the -e flag causes us to exit
+trap "sleep 99999" ERR
+
+set -ex
+
+. ./config.sh
+
+# get absolute path to fixdiff
+abspath() {
+    echo $(cd $(dirname $1); pwd)/$(basename $1)
+}
+fixdiff=$(abspath ../fixdiff/fixdiff)
+
+merge() {
+    agent=$1
+    other=$2
+    cd $agent
+    pwd
+
+    git fetch
+
+    # merge, preferring other's changes
+    git merge --no-commit -Xtheirs $other
+
+    # save the merge diff and undo the merge
+    git diff --staged > .diff
+    if ! git merge --abort 
+    then 
+        # we will also get here if the merge was a fast-forward
+        git push
+        cd -
+        return 0
+    fi
+
+    # check sanity
+    cat .diff | grok chat .chat -s "You are a $agent.  Do the given changes make sense?  Your answer must match the following regex: '^answer=(yes|no)$'" > .answer
+
+    # if answer=yes then do the merge for real
+    if [ $(cat .answer) == "answer=yes" ]
+    then
+        git merge -Xtheirs -m "merge with $other" $other
+    fi
+    git push
+
+    # update grokker
+    grok add *
+
+    cd -
+}
+
+edit() {
+    agent=$1
+    cd $agent
+    pwd
+
+    # get the last commit we looked at
+    if [ -f .lastcommit ]
+    then
+        lastcommit=$(cat .lastcommit)
+    else
+        # start at the beginning of time
+        lastcommit=$(git rev-list --max-parents=0 HEAD)
+    fi
+    # get the files that have changed since then
+    git log --pretty=format: --name-only $lastcommit..HEAD > .changed
+
+    # if there are no changes, then return
+    if [ ! -s .changed ]
+    then
+        cd -
+        return 0
+    fi
+
+    inputs=$(cat .changed)
+    # remove blank lines
+    inputs=$(echo "$inputs" | sed '/^$/d')
+    # replace newlines with commas
+    inputs=$(echo "$inputs" | tr '\n' ',' | sed 's/,$//')
+    # get output for this agent from agent_outputs array in config.sh
+    output=${agent_outputs[$agent]}
+
+    while true
+    do
+        if time grok chat .chat -s "You are a $agent." --input-files="$inputs" --output-files="$output" -m "Edit $output based on the changes in $inputs."
+        then
+            break
+        fi
+        echo retrying...
+    done
+
+    # update grokker
+    grok add *
+
+    # commit
+    git add *
+    grok commit > .commitmsg
+    git commit -F .commitmsg
+    git push
+
+    # save the commit we just looked at
+    git rev-parse HEAD > .lastcommit
+
+    cd -
+}
+
+
+agent=$1
+
+cd agents
+while true
+do
+    # merge with main
+    merge $agent origin/main
+
+    # merge with other branches
+    for other in *
+    do
+        if [ $agent == $other ]
+        then
+            continue
+        fi
+        merge $agent origin/$other/main
+    done
+
+    # make a change
+    edit $agent
+    sleep 10
+done
+
+
+```
+
+
+File: config.sh
+```
+agents="facilitator pygame-developer tester user"
+# associate outputs with agents
+declare -A agent_outputs
+agent_outputs[user]="requirements.md"
+agent_outputs[facilitator]="tasks.md"
+agent_outputs[pygame-developer]="pong.py"
+agent_outputs[tester]="test-results.md"
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: merge.sh
+```
+#!/bin/bash
+
+function merge() {
+    dir=$1
+    branch=$2
+
+    cd $dir
+
+    git fetch
+    git checkout master
+
+    if ! git merge $branch
+    then
+        if ! git merge --abort >/dev/null 2>&1
+        then
+        echo retrying...
+    done
+
+    # update grokker
+    grok add *
+
+    # commit
+    git add *
+    grok commit > .commitmsg
+    git commit -F .commitmsg
+    git push
+
+    # save the commit we just looked at
+    git rev-parse HEAD > .lastcommit
+
+    cd -
+}
+
+
+agent=$1
+
+cd agents
+while true
+do
+    # merge with main
+    merge $agent origin/main
+
+    # merge with other branches
+    for other in *
+    do
+        if [ $agent -eq $other ]
+        then
+            continue
+        fi
+        merge $agent origin/$other/main
+    done
+
+    sleep 10
+done
+```
+
+File: config.sh
+```
+agents="facilitator pygame-developer tester user"
+declare -A agent_outputs
+agent_outputs[user]="requirements.md"
+agent_outputs[facilitator]="tasks.md"
+agent_outputs[pygame-developer]="pong.py"
+agent_outputs[tester]="test-results.md"
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+make the graph edges have an arrow on both ends.
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat"];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat"];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat"];
+    "Agent: Tester" -> "Agent: User" [label="grok chat"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both"];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both"];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both"];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good, but the agents can all communicate with each other -- the 'grok chat' arrows should connect all of them densely and should be dotted lines.
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both"];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both"];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both"];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+tester and user also talk with each other.
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+facilitator and user also talk with each other.  everyone talks with everyone.
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good.  now relabel all of the 'grok chat' edges to 'comm via files'
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: dataflow_new.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good.  now relabel all of the 'grok chat' edges to 'comm via files'
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="grok chat", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="grok chat", dir="both", style=dotted];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: updated_dataflow.dot
+```
+digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good.  now create a stack.dot graph with origin.git at the bottom, agents above that, and a separate AI box above each agent.'
+
+File: dataflow.dot
+```digraph G {
+    rankdir=LR;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "control" [label="control\n(Control Repository)"];
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "control" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+
+    "Agent: User" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: User" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Facilitator" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Tester" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Pygame-Developer" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: User" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Facilitator" [label="comm via files", dir="both", style=dotted];
+    "Agent: Tester" -> "Agent: Pygame-Developer" [label="comm via files", dir="both", style=dotted];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator";
+    "origin.git" -> "Agent: Pygame-Developer";
+    "origin.git" -> "Agent: Tester";
+    "origin.git" -> "Agent: User";
+    "Agent: Facilitator" -> "AI: Facilitator Agent";
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent";
+    "Agent: Tester" -> "AI: Tester Agent";
+    "Agent: User" -> "AI: User Agent";
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good.  make the edge arrows double-ended.  label the git-agent edges.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator";
+    "origin.git" -> "Agent: Pygame-Developer";
+    "origin.git" -> "Agent: Tester";
+    "origin.git" -> "Agent: User";
+    "Agent: Facilitator" -> "AI: Facilitator Agent";
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent";
+    "Agent: Tester" -> "AI: Tester Agent";
+    "Agent: User" -> "AI: User Agent";
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: updated_stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+that's good.  label the git-agent edges with just the word 'files'.  your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" git clone, push, fetch, merge", dir="both"];
+    "origin.git" -> "Agent: User" [label=" git clone, push, fetch, merge", dir="both"];
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+excellent!  now add an agent for the control reop, with a human instead of an AI.  your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    "control.git" [label="control.git\n(Control Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+    "Control Agent: Human" [label="Control Agent: Human"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "control.git" -> "Control Agent: Human" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+oops.  i mean add an agent named 'Control', still connected to origin.git, but with a human instead of an AI.  your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    "control.git" [label="control.git\n(Control Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+    "Control Agent: Human" [label="Control Agent: Human"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "control.git" -> "Control Agent: Human" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Human: Control Agent" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+getting close.  i mean add an agent box in between Control and origin, with a Human box above it.  Make it look like the AI agent stacks, but with a human at the top instead of an AI. your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Human: Control Agent" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+getting close.  i mean add an agent box in between Control and origin, with a Human box above it.  Make it look like the AI agent stacks, but with a human at the top instead of an AI. your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Human: Control Agent" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+USER:
+getting close.  i mean add an agent box in between Control and origin, with a Human box above it.  Make it look like the AI agent stacks, but with a human at the top instead of an AI. your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control Agent";
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Human: Control Agent" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}
+```
+
+
+
+
+
+
+
+
+USER:
+better.  the 'agent: control' output is 'all files'.  your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}
+
+```
+
+
+
+
+
+
+
+USER:
+better.  the 'agent: control' output is 'all files'.  your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}
+
+```
+
+
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control\nOutput: All Files"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" All Files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}
+```
+
+
+
+
+USER:
+better.  the edge between 'agent: control' and origin should just be labeled 'files'.  your output file must be named 'stack.dot'.
+
+File: stack.dot
+```digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control\nOutput: All Files"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" All Files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}
+
+```
+
+
+AI:
+File: stack.dot
+```
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control\nOutput: All Files"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}
+```
+
