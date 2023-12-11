@@ -1,0 +1,37 @@
+digraph G {
+    rankdir=TB;
+    node [shape=box];
+
+    vcs [shape=cylinder, label="Version Control System (VCS)", rank=sink]
+
+    subgraph cluster_agent {
+        label="Agent (fetch, merge, commit, push)";
+
+        agent_gitfetch [shape=box, label="git fetch"];
+        agent_gitmerge [shape=diamond, label="git merge"];
+        agent_gitcommitResolve [shape=box, label="git commit (resolve)"];
+        agent_gitcommitEdit [shape=box, label="git commit (edit)"];
+        agent_gitpush [shape=box, label="git push"];
+
+        agent_gitfetch -> agent_gitmerge;
+        agent_gitcommitResolve -> agent_gitpush;
+        agent_gitcommitEdit -> agent_gitpush;
+        agent_gitmerge -> agent_gitcommitEdit [label="no conflicts"];
+    }
+
+    subgraph cluster_brain {
+        label="Brain (edit files & resolve merge conflicts)";
+        rank=source;
+
+        editFiles [shape=box, label="edit files"];
+        resolveMerge [shape=box, label="resolve merge conflicts"];
+
+        agent_gitfetch -> editFiles [style=dashed];
+        editFiles -> agent_gitcommitEdit [weight=2];
+        resolveMerge -> agent_gitcommitResolve [weight=2];
+        agent_gitmerge -> resolveMerge [style=dashed, label="conflicts"];
+    }
+
+    agent_gitpush -> vcs [label="Agent pushes updates to VCS", weight=2];
+    vcs -> agent_gitfetch [label="VCS updates are pulled by the agent"];
+}

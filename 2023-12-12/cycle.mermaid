@@ -1,0 +1,12 @@
+graph TB
+    Step1[Start]
+    Step2{Check for agent}
+    Step3{Run a single agent}
+    Step4{Run all agents}
+    Step5[End]
+
+    Step1 --> Step2
+    Step2 -- Agent exists --> Step3
+    Step2 -- Agent not exists --> Step4
+    Step3 --> Step5
+    Step4 --> Step5

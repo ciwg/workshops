@@ -1,0 +1,28 @@
+digraph G {
+    rankdir=BT;
+    node [shape=cylinder];
+    "origin.git" [label="origin.git\n(Git Repository)"];
+    node [shape=box];
+    "AI: Facilitator Agent";
+    "AI: Pygame-Developer Agent";
+    "AI: Tester Agent";
+    "AI: User Agent";
+    "Human: Control";
+    "Agent: Control" [label="Agent: Control\nOutput: All Files"]
+    "Agent: Facilitator" [label="Agent: Facilitator\nOutput: tasks.md"];
+    "Agent: Pygame-Developer" [label="Agent: Pygame-Developer\nOutput: pong.py"];
+    "Agent: Tester" [label="Agent: Tester\nOutput: test-results.md"];
+    "Agent: User" [label="Agent: User\nOutput: requirements.md"];
+
+    "origin.git" -> "Agent: Facilitator" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Pygame-Developer" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Tester" [label=" files", dir="both"];
+    "origin.git" -> "Agent: User" [label=" files", dir="both"];
+    "origin.git" -> "Agent: Control" [label=" files", dir="both"];
+    
+    "Agent: Facilitator" -> "AI: Facilitator Agent" [dir="both"];
+    "Agent: Pygame-Developer" -> "AI: Pygame-Developer Agent" [dir="both"];
+    "Agent: Tester" -> "AI: Tester Agent" [dir="both"];
+    "Agent: User" -> "AI: User Agent" [dir="both"];
+    "Agent: Control" -> "Human: Control" [dir="both"];
+}

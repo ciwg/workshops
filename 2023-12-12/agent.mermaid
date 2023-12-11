@@ -1,0 +1,17 @@
+graph TB
+    Brain_AI("Brain: AI")
+    Brain_Human("Brain: Human")
+    Brain_IoT("Brain: IoT")
+    agent1["grok agent"]
+    agent2["grok agent"]
+    agent3["grok agent"]
+    Brain_AI -->|call| agent1
+    Brain_Human -->|call| agent2
+    Brain_IoT -->|call| agent3
+    agent1 -. callback .-> Brain_AI
+    agent2 -. callback .-> Brain_Human
+    agent3 -. callback .-> Brain_IoT
+    agent1 -->|files| versioning
+    agent2 -->|files| versioning
+    agent3 -->|files| versioning
+    versioning("Version Control Repository(e.g. git)")

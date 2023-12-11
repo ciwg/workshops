@@ -1,0 +1,17 @@
+graph TB
+    start((Start)) -->|Loop Start| mergeMain[Merge with origin/main]
+    mergeMain --> pushMainChanges[Push Merge Changes]
+    pushMainChanges -->|Time Delay| mergeOther[Merge with Other Branches]
+    mergeOther --> pushOtherChanges[Push Merge Changes]
+    pushOtherChanges --> grokChat[Grok Chat]
+    grokChat --> answerCheck{Check 'answer'}
+    answerCheck -->|answer = yes| mergeReal[Perform Real Merge]
+    answerCheck -->|answer = no| pushMainChanges
+    mergeReal --> pushRealMergeChanges[Push Merge Changes]
+    pushRealMergeChanges --> grokAdd[Grok Add]
+    grokAdd --> edit[Edit agent's work]
+    edit --> grokChatEdit[Grok Chat]
+    grokChatEdit --> grokAddEdit[Grok Add]
+    grokAddEdit --> gitCommit[Git Commit]
+    gitCommit --> gitPush[Git Push]
+    gitPush -->|Time Delay| mergeMain
