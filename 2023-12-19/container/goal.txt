@@ -1,0 +1,6 @@
+I want to use 'grok chat' with the gpt-4 model to test the ability to
+write and test code in a container.  You will create a Dockerfile for
+the container, a start.sh that builds and starts the container, and a
+cycle.sh that will be run for each iteration of writing and testing
+code.  List all of your output files in manifest.txt.  If you need
+more files to be created, list them in manifest.txt.

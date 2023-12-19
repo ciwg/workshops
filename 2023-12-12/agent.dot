@@ -8,16 +8,16 @@ digraph G {
     "grok agent 2" [label="grok agent"];
     "grok agent 3" [label="grok agent"];
 
-    "versioning" -> "grok agent 1" [label="files", dir="both"];
-    "versioning" -> "grok agent 2" [label="files", dir="both"];
-    "versioning" -> "grok agent 3" [label="files", dir="both"];
+    "versioning" -> "grok agent 1" [label="Fetches and Pushes", dir="both"];
+    "versioning" -> "grok agent 2" [label="Fetches and Pushes", dir="both"];
+    "versioning" -> "grok agent 3" [label="Fetches and Pushes", dir="both"];
     
-    "grok agent 1" -> "Brain: AI" [label="callback", dir="forward", style=dotted];
-    "Brain: AI" -> "grok agent 1" [label="call", dir="forward"];
+    "grok agent 1" -> "Brain: AI" [label="Feedback\n(modifications,merge conflicts)", dir="forward", style=dotted];
+    "Brain: AI" -> "grok agent 1" [label="Instructions\n(join,clone,run)", dir="forward"];
 
-    "grok agent 2" -> "Brain: Human" [label="callback", dir="forward", style=dotted];
-    "Brain: Human" -> "grok agent 2" [label="call", dir="forward"];
+    "grok agent 2" -> "Brain: Human" [label="Feedback\n(modifications,merge conflicts)", dir="forward", style=dotted];
+    "Brain: Human" -> "grok agent 2" [label="Instructions\n(join,clone,run)", dir="forward"];
 
-    "grok agent 3" -> "Brain: IoT" [label="callback", dir="forward", style=dotted];
-    "Brain: IoT" -> "grok agent 3" [label="call", dir="forward"];
+    "grok agent 3" -> "Brain: IoT" [label="Feedback\n(modifications,merge conflicts)", dir="forward", style=dotted];
+    "Brain: IoT" -> "grok agent 3" [label="Instructions\n(join,clone,run)", dir="forward"];
 }

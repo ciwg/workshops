@@ -1,0 +1,42 @@
+digraph G {
+    rankdir=TB;
+    node [shape=box,  style="rounded", color="black"];
+    edge [color="black", dir=forward];
+
+    start [label="Start", shape=ellipse, color="black"];
+    readArgs [label="Read Arguments and Flags"];
+    fetchLatestCode [label="Fetch Latest Code"];
+    checkUncommittedChanges [label="Check Uncommitted Changes"];
+    checkUserBranch [label="Check if on User Branch"];
+
+    condition_CreateNewBranchFromBase [label="Create new branch from base branch?", shape=diamond];
+    condition_OtherBranchIsGiven [label="Is Other Branch Given?", shape=diamond];
+    
+    createNewBranch [label="Create New User Branch from Base and Push"];
+    compareWithRelatedBranches [label="Compare with Related Branches"];
+
+    mergeOtherBranch [label="Merge with Other Branch", shape=box3d];
+    commitMerge [label="Commit Merge with Credited Co-Authors"];
+
+    condition_UncommittedChangesAtEnd [label="Uncommitted Changes?", shape=diamond];
+    condition_AutoPush [label="Automatic Push?", shape=diamond];
+
+    end [label="End", shape=ellipse, color="black"];
+
+    start -> readArgs -> fetchLatestCode -> checkUncommittedChanges -> checkUserBranch -> condition_CreateNewBranchFromBase;
+    condition_CreateNewBranchFromBase -> createNewBranch [label="Yes"]; 
+    condition_CreateNewBranchFromBase -> condition_OtherBranchIsGiven [label="No"];
+    createNewBranch -> end;
+    
+    condition_OtherBranchIsGiven -> compareWithRelatedBranches [label="No"]; 
+    condition_OtherBranchIsGiven -> mergeOtherBranch [label="Yes"];
+
+    compareWithRelatedBranches -> end;
+
+    mergeOtherBranch -> commitMerge -> condition_UncommittedChangesAtEnd;
+    condition_UncommittedChangesAtEnd -> condition_AutoPush [label="No"];
+    condition_UncommittedChangesAtEnd -> commitMerge [label="Yes"];
+
+    condition_AutoPush -> end [label="No"];
+    condition_AutoPush -> end [label="Yes, push changes and end"];
+}

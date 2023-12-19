@@ -4,7 +4,7 @@ This system architecture centers on autonomous 'grok agents', each paired with a
 
 ## agent.dot
 
-The `agent.dot` diagram illustrates the high-level interaction between the filing system and the grok agents. The agents, each coupled with a unique type of 'brain', consistently fetch and push updates to and from the versioning system, creating a cyclical flow of information exchange.
+The `agent.dot` diagram illustrates the high-level interaction between the filesystem and the grok agents. The agents, each coupled with a unique type of 'brain', consistently fetch and push updates to and from the versioning system, creating a cyclical flow of information exchange.
 
 ## agent-flow.dot
 
@@ -12,7 +12,7 @@ The `agent-flow.dot` diagram provides a deeper insight into the operation of ind
 
 1. Brain uses `clone` to duplicate the repository and initialize the workspace.
 2. Brain switches the current working directory (using `cd`) to the name of the branch cloned.
-3. Brain issues the `join` command to join a specific branch. Upon executing this operation, the agent pushes any pending updates.
+3. Brain issues the `join` command to create and join a specific branch in the VCS.
 4. The agent fetches updates from the VCS regularly.
 5. If there are no merge conflicts, the agent merges new commits from other branches and produces a list of updated files on stdout, for the Brain to act upon.
 6. If merge conflicts occur, the Brain assists the agent in resolving these before the changes are committed.
@@ -25,7 +25,7 @@ In this operation, the Brain has two primary responsibilities:
 
 # Initialization of an Agent's Workspace
 
-To set up an agent's workspace, the Brain first clones the repository using the `clone` command. The Brain then changes its current directory to match the branch name, just before issuing the `join` command. This process simplifies the initialization process for the agent's workspace.
+To set up an agent's workspace, the Brain first clones the repository using the `clone` command. The Brain then changes its current directory to match the branch name, just before issuing the `join` command. The `join` command creates a new branch in the VCS and the agent begins operating within the context of this branch. This process simplifies the initialization process for the agent's workspace.
 
 ```bash
 grok agent clone <clone-source-url>
@@ -35,28 +35,28 @@ grok agent join <branch-name>
 
 # Running an Autonomous Agent
 
-An AI Brain can operate a fully autonomous grok agent using the `grok agent run` command. This command needs the following arguments: 
+An AI Brain can operate a fully autonomous grok agent using the `grok agent run` command. The command requires following arguments: 
 '-r' for the role name, 
 '-i' for input files, and 
 '-o' for output files. 
 
-The input and output files arguments can handle multiple comma-separated file names. Using the role name to infer the branch name eliminates redundancy and simplifies the operation.
+The command accepts multiple comma-separated file names for `-i` and `-o` options. The role name implies the branch name, thus simplifying the operation and eliminating redundancy.
 
 ```bash
 grok agent run -r <role-name> -i <input-file1,input-file2,...> -o <output-file1,output-file2,...>
 ```
 
-# Joining a Group of grok Agents and Monitoring the VCS
+# Joining a Group and Monitoring the VCS with grok Agents
 
-A Brain can join a group of grok agents and start monitoring file changes within a Git repository using the `grok agent join` command. Here, the branch name is inferred from the role defined during the `run` command.
+A Brain can allow a grok agent to join a group, creating its own branch and begin tracking file changes within a Git repository. It uses the `grok agent join` command to accomplish this. The branch name is inferred from the role specified in the `grok agent run` command.
 
-Executing the `join` command follows these steps:
+Here are the steps for the `join` command:
 
-1. The Brain integrates with a group of grok agents, each of which operates on its dedicated branch.
-2. The Agent pushes any local changes that haven't been synced yet, if any.
-3. The Agent fetches updates from the VCS regularly.
-4. Appearing similar to `inotifywait`, the Agent watches for file changes - it actually gets notifications about these changes from the git log, not directly from the filesystem.
-5. The Agent halts execution and waits for modifications within certain directories or files.
-6. Upon spotting file changes, the Agent fetches any new commits from different branches and lists the updated files on stdout for the Brain to address.
+1. By issuing the `join` command, the Brain signifies the grok agent to initiate its own branch in the VCS and join the group of grok agents working on the repository.
+2. Each agent within the group operates autonomously on its dedicated branch, regularly fetching updates from the VCS.
+3. The agent watches for file changes in the repository, taking a similar approach to `inotifywait`. The notifications about these changes come from the git log, not directly from the filesystem.
+4. Upon detecting modifications within certain directories or files, the Agent pauses its operation and notifies the Brain.
+5. If file changes occur, the Agent fetches any new commits from different branches and shares an updated file list with the Brain. The Brain then processes these updates.
 
-This ongoing interaction forms a continuous development loop, driven by the changes pushed to the VCS, setting the course for the next cycle.
+This iterative interaction between the Brain and the agent forms a continuous development loop, with file change notifications setting the course for consequent actions.
+

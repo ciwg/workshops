@@ -1,0 +1,25 @@
+digraph G {
+    rankdir=TB;
+    node [shape=box, style="rounded", color="black"];
+    edge [color="black", dir=forward];
+
+    start [label="Start", shape=ellipse, color="black"];
+    fetchCode [label="Fetch Latest Code"];
+    condition [label="New Commit Detected?", shape=diamond];
+    mergeImprove [label="Merge and Improve"];
+    runTests [label="Run Tests\n(test cases and/or AI inspect)"];
+    testErrors [label="Test Errors?", shape=diamond];
+    commitCode [label="Commit Code Changes"];
+
+    start -> fetchCode;
+    fetchCode -> condition;
+
+    condition -> mergeImprove [label="Yes"];
+    mergeImprove -> runTests;
+    runTests -> testErrors;
+    testErrors -> commitCode [label="No"];
+    testErrors -> mergeImprove [label="Yes"];
+
+    commitCode -> fetchCode;
+    condition -> fetchCode [label="No", weight=0.1];
+}

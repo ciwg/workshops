@@ -1,0 +1,22 @@
+digraph G {
+    rankdir=TB;
+    node [shape=box,  style="rounded", color="black"];
+    edge [color="black", dir=forward];
+
+    subgraph cluster_0 {
+        color=transparent;
+        node [style=filled, color=white];
+        start [label="Start", shape=ellipse, color="black"];
+        readConfig [label="Read Configuration File"];
+        forAgentLoop [label="For each agent in config"];
+        start -> readConfig -> forAgentLoop;
+
+        label = "Container Initialization Algorithm";
+    }
+
+    startAgentContainer [label="Start Agent's Container"];
+    forAgentLoop -> startAgentContainer;
+
+    end [label="End", shape=ellipse, color="black"];
+    startAgentContainer -> end;
+}
