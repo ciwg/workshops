@@ -1,0 +1,83 @@
+digraph G {
+    node [shape=box]
+
+    subgraph cluster_0 {
+        label="grokker"
+        color=blue
+        UI_CLI [label="UI (CLI with subcommands)"]
+        UI_Web [label="UI (Web)"]
+        API [label="Go API (doc, chat, etc)"]
+        context [label="context chunking/embedding"]
+        cosign_similarity_search [label="cosign similarity search for context"]
+    }
+
+    subgraph cluster_1 {
+        label="Container Manager";
+        color=blue
+        container_manager [label="container manager"]
+        container [label="container"]
+    }
+
+    subgraph cluster_2 {
+        label="VCS Manager";
+        color=blue
+        vcs_manager [label="VCS manager"]
+        vcs_repo [label="VCS repo"]
+    }
+
+    subgraph cluster_3 {
+        label="WASMgrid";
+        color=orange
+
+        ai_gateway [label="AI gateway"]
+        module_manager [label="module manager"]
+
+        subgraph cluster_3_1 {
+            label="CAS KV";
+            color=lightgrey
+            vector_db [label="vector db"]
+            keyvalue_db [label="content-addressable key/value store"]
+        }
+    }
+
+    subgraph cluster_4 {
+        label="Decentralized AI";
+        color=blue
+        decentralized_ai [label="Decentralized AI"]
+    }
+
+    subgraph cluster_5 {
+        label="Internet";
+        color=green
+        relay_1 [label="relay server"]
+        relay_2 [label="relay server"]
+        relay_3 [label="relay server"]
+        ada_002 [label="OpenAI ADA-002"]
+        gpt_4 [label="OpenAI GPT-4"]
+        anthropic_ai [label="Anthropic AI"]
+    }
+
+    UI_CLI -> API
+    UI_Web -> API
+    API -> context
+    API -> container_manager
+    API -> vcs_manager
+    API -> ai_gateway
+    API -> cosign_similarity_search
+    context -> vector_db
+    cosign_similarity_search -> vector_db
+    cosign_similarity_search -> ai_gateway
+    ai_gateway -> gpt_4
+    ai_gateway -> ada_002
+    ai_gateway -> anthropic_ai
+    ai_gateway -> decentralized_ai
+    vector_db -> keyvalue_db
+    container_manager -> container
+    container -> keyvalue_db
+    vcs_manager -> vcs_repo
+    vcs_repo -> keyvalue_db
+    module_manager -> keyvalue_db
+    keyvalue_db -> relay_1
+    keyvalue_db -> relay_2
+    keyvalue_db -> relay_3
+}

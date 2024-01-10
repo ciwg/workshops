@@ -1,0 +1,34 @@
+digraph G {
+    node [shape=box]
+
+    UI [label="UI (CLI with subcommands)"]
+    API [label="Go API (doc, chat, etc)"]
+    context [label="context chunking/embedding"]
+    container_manager [label="container manager"]
+    git_manager [label="git manager"]
+    vector_db [label="vector db"]
+    container [label="container"]
+    git_repo [label="git repo"]
+    keyvalue_db_json [label="key/value db (JSON .grok file)"]
+    keyvalue_db_container [label="key/value db (container image layers)"]
+    keyvalue_db_git [label="key/value db (.git/objects)"]
+    cosign_similarity_search [label="cosign similarity search for context"]
+    gpt_4 [label="OpenAI GPT-4"]
+    ada_002 [label="OpenAI ADA-002"]
+    
+    UI -> API
+    API -> context
+    API -> container_manager
+    API -> git_manager
+    API -> cosign_similarity_search
+    API -> gpt_4
+    context -> vector_db
+    context -> ada_002
+    cosign_similarity_search -> vector_db
+    cosign_similarity_search -> gpt_4
+    vector_db -> keyvalue_db_json
+    container_manager -> container
+    container -> keyvalue_db_container
+    git_manager -> git_repo
+    git_repo -> keyvalue_db_git
+}

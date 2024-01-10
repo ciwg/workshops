@@ -1,0 +1,12 @@
+digraph "" {
+	node [shape=box];
+	"UI (CLI with subcommands)" -> "Go API (doc, chat, etc)";
+	"Go API (doc, chat, etc)" -> "context chunking/embedding";
+	"Go API (doc, chat, etc)" -> "cosign similarity search for context";
+	"Go API (doc, chat, etc)" -> "OpenAI GPT-4";
+	"context chunking/embedding" -> "OpenAI ADA-002";
+	"context chunking/embedding" -> "vector db";
+	"cosign similarity search for context" -> "vector db";
+	"cosign similarity search for context" -> "OpenAI GPT-4";
+	"vector db" -> "key/value db (JSON .grok file)";
+}
