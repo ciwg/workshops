@@ -65,6 +65,7 @@ digraph G {
     API -> ai_gateway
     API -> cosign_similarity_search
     context -> vector_db
+    context -> ai_gateway
     cosign_similarity_search -> vector_db
     cosign_similarity_search -> ai_gateway
     ai_gateway -> gpt_4

@@ -63,6 +63,8 @@ File: wip.dot
 
 
 
+
+
 AI:
 It looks like you would like to adjust your graph by moving `git/objects` under `repo`, `image layers` under `container`, and `JSON` under `vector`.
 
@@ -98,6 +100,8 @@ digraph G {
 }
 ```
 EOF_wip.dot
+
+
 
 
 
@@ -179,6 +183,8 @@ File: current.dot
 
 
 
+
+
 AI:
 You would like to rename `API` to `Go API` in your graph. Here is your updated graph:
 
@@ -198,6 +204,8 @@ digraph "" {
 }
 ```
 EOF_current.dot
+
+
 
 
 
@@ -274,6 +282,8 @@ File: current.dot
 
 
 
+
+
 AI:
 You would like to rename "context similarity search" to "cosign similarity search for context" in your graph. Here is your updated graph:
 
@@ -293,6 +303,8 @@ digraph "" {
 }
 ```
 EOF_current.dot
+
+
 
 
 
@@ -397,6 +409,8 @@ File: wip.dot
 
 
 
+
+
 AI:
 I have combined the pieces from `current.dot` that were missing from `wip.dot`. Here is your updated graph:
 
@@ -438,6 +452,8 @@ digraph G {
 }
 ```
 EOF_wip.dot
+
+
 
 
 
@@ -528,6 +544,8 @@ File: roadmap.dot
 
 
 
+
+
 AI:
 Understood, you want to merge the three different key/value databases into one node. Here's your updated graph:
 
@@ -592,6 +610,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 rename the kv store to "content-addressable key/value store"
 
@@ -630,6 +650,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -717,6 +739,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 rename git manager to VCS manager.  rename git repo to VCS repo.
 insert an "AI gateway"  block between cosign and GPT-4.  add an
@@ -760,6 +784,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -856,6 +882,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 move OpenAI and Anthropic out of the WASMgrid cluster.
 
@@ -910,6 +938,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -1003,6 +1033,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 move ADA out of the WASMgrid cluster.  move decentralized AI into a
 new cluster with a blue border.  add a new cluster labeled "Internet"
@@ -1062,6 +1094,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -1167,6 +1201,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 add edges pointing from the KV store to 
 each of the relay server boxes.
@@ -1239,6 +1275,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -1343,6 +1381,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 add a "module manager" box in the WASMgrid cluster.  add an edge from
 module manager to CAS.
@@ -1415,6 +1455,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -1516,88 +1558,6 @@ EOF_roadmap.dot
 
 
 
-USER:
-move GPT-4, Anthropic, and ADA into the Internet cluster
-
-File: roadmap.dot
-```digraph G {
-    node [shape=box]
-
-    subgraph cluster_0 {
-        label="grokker"
-        color=blue
-        UI_CLI [label="UI (CLI with subcommands)"]
-        UI_Web [label="UI (Web)"]
-        API [label="Go API (doc, chat, etc)"]
-    }
-
-    subgraph cluster_1 {
-        label="WASMgrid";
-        color=orange
-        context [label="context chunking/embedding"]
-        container_manager [label="container manager"]
-        vcs_manager [label="VCS manager"]
-        vector_db [label="vector db"]
-        container [label="container"]
-        vcs_repo [label="VCS repo"]
-        keyvalue_db [label="content-addressable key/value store"]
-        cosign_similarity_search [label="cosign similarity search for context"]
-        ai_gateway [label="AI gateway"]
-        module_manager [label="module manager"]
-    }
-
-    subgraph cluster_2 {
-        label="Decentralized AI";
-        color=blue
-        decentralized_ai [label="Decentralized AI"]
-    }
-
-    subgraph cluster_3 {
-        label="Internet";
-        color=green
-        relay_1 [label="relay server"]
-        relay_2 [label="relay server"]
-        relay_3 [label="relay server"]
-    }
-
-    ada_002 [label="OpenAI ADA-002"]
-    gpt_4 [label="OpenAI GPT-4"]
-    anthropic_ai [label="Anthropic AI"]
-
-    UI_CLI -> API
-    UI_Web -> API
-    API -> context
-    API -> container_manager
-    API -> vcs_manager
-    API -> cosign_similarity_search
-    context -> vector_db
-    context -> ada_002
-    cosign_similarity_search -> vector_db
-    cosign_similarity_search -> ai_gateway
-    ai_gateway -> gpt_4
-    ai_gateway -> anthropic_ai
-    ai_gateway -> decentralized_ai
-    vector_db -> keyvalue_db
-    container_manager -> container
-    container -> keyvalue_db
-    vcs_manager -> vcs_repo
-    vcs_repo -> keyvalue_db
-    module_manager -> keyvalue_db
-    keyvalue_db -> relay_1
-    keyvalue_db -> relay_2
-    keyvalue_db -> relay_3
-}
-
-```
-
-
-
-
-
-
-
-
-
 
 
 USER:
@@ -1673,6 +1633,94 @@ File: roadmap.dot
 }
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+USER:
+move GPT-4, Anthropic, and ADA into the Internet cluster
+
+File: roadmap.dot
+```digraph G {
+    node [shape=box]
+
+    subgraph cluster_0 {
+        label="grokker"
+        color=blue
+        UI_CLI [label="UI (CLI with subcommands)"]
+        UI_Web [label="UI (Web)"]
+        API [label="Go API (doc, chat, etc)"]
+    }
+
+    subgraph cluster_1 {
+        label="WASMgrid";
+        color=orange
+        context [label="context chunking/embedding"]
+        container_manager [label="container manager"]
+        vcs_manager [label="VCS manager"]
+        vector_db [label="vector db"]
+        container [label="container"]
+        vcs_repo [label="VCS repo"]
+        keyvalue_db [label="content-addressable key/value store"]
+        cosign_similarity_search [label="cosign similarity search for context"]
+        ai_gateway [label="AI gateway"]
+        module_manager [label="module manager"]
+    }
+
+    subgraph cluster_2 {
+        label="Decentralized AI";
+        color=blue
+        decentralized_ai [label="Decentralized AI"]
+    }
+
+    subgraph cluster_3 {
+        label="Internet";
+        color=green
+        relay_1 [label="relay server"]
+        relay_2 [label="relay server"]
+        relay_3 [label="relay server"]
+    }
+
+    ada_002 [label="OpenAI ADA-002"]
+    gpt_4 [label="OpenAI GPT-4"]
+    anthropic_ai [label="Anthropic AI"]
+
+    UI_CLI -> API
+    UI_Web -> API
+    API -> context
+    API -> container_manager
+    API -> vcs_manager
+    API -> cosign_similarity_search
+    context -> vector_db
+    context -> ada_002
+    cosign_similarity_search -> vector_db
+    cosign_similarity_search -> ai_gateway
+    ai_gateway -> gpt_4
+    ai_gateway -> anthropic_ai
+    ai_gateway -> decentralized_ai
+    vector_db -> keyvalue_db
+    container_manager -> container
+    container -> keyvalue_db
+    vcs_manager -> vcs_repo
+    vcs_repo -> keyvalue_db
+    module_manager -> keyvalue_db
+    keyvalue_db -> relay_1
+    keyvalue_db -> relay_2
+    keyvalue_db -> relay_3
+}
+
+```
+
+
 
 
 
@@ -1762,6 +1810,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 move CAS KV store into a subcluster of WASMgrid.
 
@@ -1834,6 +1884,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -1924,6 +1976,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 move container, VCS repo, and vector DB into the CAS KV cluster.
 
@@ -2001,6 +2055,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 
@@ -2086,6 +2142,8 @@ EOF_roadmap.dot
 
 
 
+
+
 USER:
 add an edge from Go API to AI gateway.  move VCS manager and container
 manager each into their own clusters with blue borders.  move context
@@ -2163,6 +2221,8 @@ File: roadmap.dot
 }
 
 ```
+
+
 
 
 AI:
@@ -2259,6 +2319,194 @@ EOF_roadmap.dot
 
 
 
+
+
+
+
+
+
+USER:
+add an edge from chunking to AI gateway
+
+File: roadmap.dot
+```digraph G {
+    node [shape=box]
+
+    subgraph cluster_0 {
+        label="grokker"
+        color=blue
+        UI_CLI [label="UI (CLI with subcommands)"]
+        UI_Web [label="UI (Web)"]
+        API [label="Go API (doc, chat, etc)"]
+        context [label="context chunking/embedding"]
+        cosign_similarity_search [label="cosign similarity search for context"]
+    }
+
+    subgraph cluster_1 {
+        label="Container Manager";
+        color=blue
+        container_manager [label="container manager"]
+        container [label="container"]
+    }
+
+    subgraph cluster_2 {
+        label="VCS Manager";
+        color=blue
+        vcs_manager [label="VCS manager"]
+        vcs_repo [label="VCS repo"]
+    }
+
+    subgraph cluster_3 {
+        label="WASMgrid";
+        color=orange
+
+        ai_gateway [label="AI gateway"]
+        module_manager [label="module manager"]
+
+        subgraph cluster_3_1 {
+            label="CAS KV";
+            color=lightgrey
+            vector_db [label="vector db"]
+            keyvalue_db [label="content-addressable key/value store"]
+        }
+    }
+
+    subgraph cluster_4 {
+        label="Decentralized AI";
+        color=blue
+        decentralized_ai [label="Decentralized AI"]
+    }
+
+    subgraph cluster_5 {
+        label="Internet";
+        color=green
+        relay_1 [label="relay server"]
+        relay_2 [label="relay server"]
+        relay_3 [label="relay server"]
+        ada_002 [label="OpenAI ADA-002"]
+        gpt_4 [label="OpenAI GPT-4"]
+        anthropic_ai [label="Anthropic AI"]
+    }
+
+    UI_CLI -> API
+    UI_Web -> API
+    API -> context
+    API -> container_manager
+    API -> vcs_manager
+    API -> ai_gateway
+    API -> cosign_similarity_search
+    context -> vector_db
+    cosign_similarity_search -> vector_db
+    cosign_similarity_search -> ai_gateway
+    ai_gateway -> gpt_4
+    ai_gateway -> ada_002
+    ai_gateway -> anthropic_ai
+    ai_gateway -> decentralized_ai
+    vector_db -> keyvalue_db
+    container_manager -> container
+    container -> keyvalue_db
+    vcs_manager -> vcs_repo
+    vcs_repo -> keyvalue_db
+    module_manager -> keyvalue_db
+    keyvalue_db -> relay_1
+    keyvalue_db -> relay_2
+    keyvalue_db -> relay_3
+}
+
+```
+
+
+AI:
+Alright, additional requested edge from "context chunking/embedding" to "AI gateway" has been added. Here's your updated graph:
+
+File: roadmap.dot
+```dot
+digraph G {
+    node [shape=box]
+
+    subgraph cluster_0 {
+        label="grokker"
+        color=blue
+        UI_CLI [label="UI (CLI with subcommands)"]
+        UI_Web [label="UI (Web)"]
+        API [label="Go API (doc, chat, etc)"]
+        context [label="context chunking/embedding"]
+        cosign_similarity_search [label="cosign similarity search for context"]
+    }
+
+    subgraph cluster_1 {
+        label="Container Manager";
+        color=blue
+        container_manager [label="container manager"]
+        container [label="container"]
+    }
+
+    subgraph cluster_2 {
+        label="VCS Manager";
+        color=blue
+        vcs_manager [label="VCS manager"]
+        vcs_repo [label="VCS repo"]
+    }
+
+    subgraph cluster_3 {
+        label="WASMgrid";
+        color=orange
+
+        ai_gateway [label="AI gateway"]
+        module_manager [label="module manager"]
+
+        subgraph cluster_3_1 {
+            label="CAS KV";
+            color=lightgrey
+            vector_db [label="vector db"]
+            keyvalue_db [label="content-addressable key/value store"]
+        }
+    }
+
+    subgraph cluster_4 {
+        label="Decentralized AI";
+        color=blue
+        decentralized_ai [label="Decentralized AI"]
+    }
+
+    subgraph cluster_5 {
+        label="Internet";
+        color=green
+        relay_1 [label="relay server"]
+        relay_2 [label="relay server"]
+        relay_3 [label="relay server"]
+        ada_002 [label="OpenAI ADA-002"]
+        gpt_4 [label="OpenAI GPT-4"]
+        anthropic_ai [label="Anthropic AI"]
+    }
+
+    UI_CLI -> API
+    UI_Web -> API
+    API -> context
+    API -> container_manager
+    API -> vcs_manager
+    API -> ai_gateway
+    API -> cosign_similarity_search
+    context -> vector_db
+    context -> ai_gateway
+    cosign_similarity_search -> vector_db
+    cosign_similarity_search -> ai_gateway
+    ai_gateway -> gpt_4
+    ai_gateway -> ada_002
+    ai_gateway -> anthropic_ai
+    ai_gateway -> decentralized_ai
+    vector_db -> keyvalue_db
+    container_manager -> container
+    container -> keyvalue_db
+    vcs_manager -> vcs_repo
+    vcs_repo -> keyvalue_db
+    module_manager -> keyvalue_db
+    keyvalue_db -> relay_1
+    keyvalue_db -> relay_2
+    keyvalue_db -> relay_3
+}
+```
+EOF_roadmap.dot
 
 
 
