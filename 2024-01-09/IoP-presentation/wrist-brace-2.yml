@@ -1,0 +1,192 @@
+Field Readiness: '3'
+User Manual:
+  FR Portfolio:
+    - rec2ZSKksE6kaEriA
+  Part No._UM: UM_HL013
+  Step 4 Text: Immediately after thermo-forming the brace, secure soft medical-grade cotton around it. Then, use a secure bandage to gently wrap around both the brace and the patient's wrist.
+  What is your name?: Aziz Wadi
+  Step 1 Text: Carefully submerge the wrist brace in hot water to soften it for a better fit.
+  Step 2 Text: Safely remove the brace from the hot water and quickly dry off any excess water with a clean towel.
+  What is the date?: '2020-02-06'
+  What is your email address?: aziz.wadi@fieldready.org
+  Step 3 Text: Prior to fitting the brace, consult a licensed medical professional for advice. Shape the wrist brace to the exact specification of the patient's wrist.
+Notes: Complete
+Materials: ABS Plastic
+Maker: Ram Thapa
+Eng Dwg:
+  - id: attBaSkUJSCgTblvB
+    url: https://dl.airtable.com/.attachments/f99f690d0f1a67ff43137c6d7c21a95d/77923489/HL013_Eng_Dwg.PDF
+    filename: HL013_Eng_Dwg.PDF
+    size: 75140
+    type: application/pdf
+    thumbnails:
+      small:
+        url: https://dl.airtable.com/.attachmentThumbnails/7cca97bd8fb0a50931462cac8a87cd01/c5062adc
+        width: 51
+        height: 36
+      large:
+        url: https://dl.airtable.com/.attachmentThumbnails/8bc178d9d707e57fd16e79afe2a8b548/d6a87b5c
+        width: 512
+        height: 362
+  - id: attiVpAhyZRsLzCJ1
+    url: https://dl.airtable.com/.attachments/6647376e9b207f5a20ad44db4d27ee6d/1264b1ac/HL013_Eng_Dwg.SLDDRW
+    filename: HL013_Eng_Dwg.SLDDRW
+    size: 202738
+    type: text/plain
+Name: Wrist Brace (small)
+Risk Assessment:
+  - rectAFI5822SfARVE
+Location: Nepal
+Part No.: HL013
+Production cost (USD) Qty 1: 7.46
+Approved: n/a
+In use Image:
+  - id: attyYI4pNGGCSgK7j
+    width: 628
+    height: 472
+    url: https://dl.airtable.com/.attachments/87c46623b2d4c930e45e69d0ad3cf63c/2173569f/HL013_Image_Use.jpg
+    filename: HL013_Image_Use.jpg
+    size: 36761
+    type: image/jpeg
+    thumbnails:
+      small:
+        url: https://dl.airtable.com/.attachmentThumbnails/574734b031bca5957b443345ad8ae4be/739084da
+        width: 48
+        height: 36
+      large:
+        url: https://dl.airtable.com/.attachmentThumbnails/621c863d08905a368378de8f911b2249/56145aa6
+        width: 628
+        height: 472
+      full:
+        url: https://dl.airtable.com/.attachmentThumbnails/96cacb21205acb00cae926cf73274efd/adefb127
+        width: 3000
+        height: 3000
+Production cost (USD) Qty 100: 746.27
+Maker Manual:
+  MM_Part No.: MM_HL013
+  Step 2 Text: Use a 3D slicing software to open the file and prepare for 3D printing. Apply the printing settings below (adapt if necessary for different 3D printer brands and filament manufacturers):\n\nLayer Height: 0.20 mm\nLine Width: 0.35 mm\n\nWall Thickness: 1.05 mm\nTop/Bottom Thickness: 1.0 mm\n\nInfill Density: 60%\nInfill Pattern: Flexible 3D\n\nPrinting Temperature: 205 °C\nBuild Plate Temperature: 60 °C\nFlow: 100%\nEnable Retraction: Yes\nRetraction Distance: 6.5 mm\nRetraction Speed: 25 mm/s\n\nPrint Speed: 70 mm/s\n\nEnable Print Cooling: Yes\nFan Speed: 5%\n\nSupport: No\n\nBuild Plate Adhesion Type: None
+  What is your email address?: aziz.wadi@fieldready.org
+  What is your name?: Aziz Wadi
+  Step 4 Text: Check the printed part. If there is any support or adhesion structure, gently remove it using a small cutter.
+  Step 3 Image:
+    - id: attDdf010Qgrmg3W7
+      width: 1222
+      height: 378
+      url: https://dl.airtable.com/.attachments/39c7ca5904c2bcb75d810a34e79b4567/7b6cdf96/HL013_Image_Position.png
+      filename: HL013_Image_Position.png
+      size: 222303
+      type: image/png
+      thumbnails:
+        small:
+          url: https://dl.airtable.com/.attachmentThumbnails/d29f022894c40019cae057c9c3cab284/c3d6c97e
+          width: 116
+          height: 36
+        large:
+          url: https://dl.airtable.com/.attachmentThumbnails/b147a3ec1cdc05a4589fc4ee08403663/27997245
+          width: 1222
+          height: 378
+        full:
+          url: https://dl.airtable.com/.attachmentThumbnails/bd02c8445262c411315efe96157e06f0/7043e0dd
+          width: 3000
+          height: 3000
+  Production time: 150 minutes
+  FR Portfolio:
+    - rec2ZSKksE6kaEriA
+  Step 1 Text: Properly download the STL file from the CAD files section.
+  Step 3 Text: Ensure the product is correctly positioned as shown for 3D printing.
+  Material used: PLA filament
+  Tools used: '3D slicing software\n3D printer'
+  Step 5 Text: If desired, you may consider implementing finishings such as chemical treatments (e.g. Acetone vapor) on the 3D-printed parts to smoothen the surface and eliminate gaps between layers.
+  What is the date?: '2020-02-06'
+Version: 1
+Start Date: '2017-07-24'
+CAD:
+  - id: atteBGe0woFxr0zCC
+    url: https://dl.airtable.com/.attachments/7870518e9ea0d7b9bd57bac74cb2354e/ed69b5d4/HL013_CAD.stl
+    filename: HL013_CAD.stl
+    size: 23084
+    type: application/vnd.ms-pki.stl
+  - id: attdUyCyR9zMCjbWH
+    url: https://dl.airtable.com/.attachments/824b39e867f0bb818a4d265b0b1211a5/00c6ada7/HL013_CAD.SLDPRT
+    filename: HL013_CAD.SLDPRT
+    size: 187519
+    type: application/octet-stream
+OSHWA UID: US000216
+Tech Readiness: '4'
+End Date: '2017-07-24'
+BOM:
+  - recYIiNZSeszdqVAK
+Test Plan:
+  - recu7XC7cq8i4ypRd
+Catalogue Image:
+  - id: attCMLB8ETuylfipl
+    width: 2992
+    height: 2992
+    url: https://dl.airtable.com/.attachments/d1698764702c8bc13717ce4f8cd52062/61bd5bf8/HL013_Image_Catalogue.JPG
+    filename: HL013_Image_Catalogue.JPG
+    size: 1504135
+    type: image/jpeg
+    thumbnails:
+      small:
+        url: https://dl.airtable.com/.attachmentThumbnails/0496daeef9b879a0c740b2919efc69a2/b5b44dde
+        width: 36
+        height: 36
+      large:
+        url: https://dl.airtable.com/.attachmentThumbnails/861e647724b3010759a23416fed611ca/b83a97d2
+        width: 512
+        height: 512
+      full:
+        url: https://dl.airtable.com/.attachmentThumbnails/efe6a78dca69ec54bed6bdc3b7c93a6f/ea73d389
+        width: 3000
+        height: 3000
+Production cost (USD) Qty 10: 74.63
+Critical Tool: 3D Printer
+Download Link: http://www.thingiverse.com/thing:2443844
+Licence: CC-BY-4.
+User Readiness: '5'
+RPN (Highest): 12
+Open Hardware Licence: CERN
+OSHWA Certification: '2020-02-16'
+Production time (1 unit by 1 person): 1-2 hours
+Email: ramchandra.thapa@fieldready.org
+CAD Image:
+  - id: attToq7wbSGGhxCEC
+    width: 628
+    height: 472
+    url: https://dl.airtable.com/.attachments/dabe8a6f91e1e076d1ae94b65c10ee47/678d770f/HL013_Image_CAD.jpg
+    filename: HL013_Image_CAD.jpg
+    size: 40078
+    type: image/jpeg
+    thumbnails:
+      small:
+        url: https://dl.airtable.com/.attachmentThumbnails/0c0539f3c89cf3518af8e82b48c121ca/373ecbd9
+        width: 48
+        height: 36
+      large:
+        url: https://dl.airtable.com/.attachmentThumbnails/6388250b1aa53d4d0ba383346888b1c4/ec3f0200
+        width: 628
+        height: 472
+      full:
+        url: https://dl.airtable.com/.attachmentThumbnails/7618e5fb8a4a661291d7e9d5e1a61373/58c17569
+        width: 3000
+        height: 3000
+Risk Readiness: '3'
+Description: A wrist brace designed for injury rehabilitation, ideal for use in health posts
+Designer: Ram Thapa
+Maker Readiness: '3'
+FAI:
+  - recmIrOYm9tHJwbdT
+Catalogue Notes: 'Usage Notes: This 3D Printable brace should be thermoformed to fit. The design is an inspiration from Global Outreach Doctors (abbreviated as Go Docs) and was first implemented in the field by Dr. Matthew Markert. For safety, use protective gloves while thermoforming. Apply soft cotton clothes for added comfort.\n'
+images:
+  - original: /images/HL013-attCMLB8ETuylfipl-400x300.jpg
+    thumbnail: /images/HL013-attCMLB8ETuylfipl-400x300.jpg
+    projectCard: /images/HL013-attCMLB8ETuylfipl-290x200.jpg
+    fullscreen: https://dl.airtable.com/.attachments/d1698764702c8bc13717ce4f8cd52062/61bd5bf8/HL013_Image_Catalogue.JPG
+  - original: /images/HL013-attyYI4pNGGCSgK7j-400x300.jpg
+    thumbnail: /images/HL013-attyYI4pNGGCSgK7j-400x300.jpg
+    projectCard: /images/HL013-attyYI4pNGGCSgK7j-290x200.jpg
+    fullscreen: https://dl.airtable.com/.attachments/87c46623b2d4c930e45e69d0ad3cf63c/2173569f/HL013_Image_Use.jpg
+  - original: /images/HL013-attToq7wbSGGhxCEC-400x300.jpg
+    thumbnail: /images/HL013-attToq7wbSGGhxCEC-400x300.jpg
+    projectCard: /images/HL013-attToq7wbSGGhxCEC-290x200.jpg
+    fullscreen: https://dl.airtable.com/.attachments/dabe8a6f91e1e076d1ae94b65c10ee47/678d770f/HL013_Image_CAD.jpg
