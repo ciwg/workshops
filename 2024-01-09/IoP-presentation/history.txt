@@ -1,0 +1,75 @@
+579699  2024/01/23 13:10:56 cd lab/cswg/workshops/2024-01-09/IoP-presentation/
+579700  2024/01/23 13:10:58 ls -alrt
+579701  2024/01/23 13:11:05 openscad promisegrid.scad 
+579702  2024/01/23 14:59:35 mkcd /tmp/$$
+579703  2024/01/23 14:59:41 grok init 
+579704  2024/01/23 15:00:01 cat > wrist-brace.json
+579705  2024/01/23 15:01:42 echo convert to yaml | grok chat wrist-brace.chat -i wrist-brace.json wrist-brace.yml
+579706  2024/01/23 15:01:48 echo convert to yaml | grok chat wrist-brace.chat -i wrist-brace.json -o wrist-brace.yml
+579707  2024/01/23 15:05:02 cd lab/cswg
+579708  2024/01/23 15:05:11 cd workshops/2024-01-09/
+579709  2024/01/23 15:05:13 ls -alrt
+579710  2024/01/23 15:05:18 cd IoP-presentation/
+579711  2024/01/23 15:05:19 ls -alrt
+579712  2024/01/23 15:05:26 git status .
+579713  2024/01/23 15:05:44 ls -alrt /tmp | tail
+579714  2024/01/23 15:06:00 mv /tmp/55c890b3-f735-4f31-bb95-6f0c02221672.md okh-spec.md
+579715  2024/01/23 15:06:03 ls -lart
+579716  2024/01/23 15:06:58 ls -alrt
+579717  2024/01/23 15:07:07 view wrist-brace.yml
+579718  2024/01/23 15:08:17 ls -alrt
+579719  2024/01/23 15:08:32 grok add wrist-brace.yml
+579720  2024/01/23 15:09:02 grok q "who is the creator of the wrist brace?"
+579721  2024/01/23 15:09:11 view wrist-brace.yml
+579722  2024/01/23 15:15:04 grok q "what did ram thapa create?"
+579723  2024/01/23 15:15:38 view wrist-brace.yml
+579724  2024/01/23 15:15:48 fg
+579725  2024/01/23 15:16:11 fg
+579726  2024/01/23 15:16:26 fg
+579727  2024/01/23 15:16:52 grok q "does the brace need to be formed in any way after printing?"
+579728  2024/01/23 15:17:37 view wrist-brace.yml
+579729  2024/01/23 15:18:24 grok q "what temperature does the water need to be?"
+579730  2024/01/23 15:19:40 grok q "what temperature does the water need to be assuming typical transition temp for ABS filament?"
+579731  2024/01/23 15:21:04 grok q "how do i keep from burning the patient with the hot water and ABS?"
+579732  2024/01/23 15:22:01 grep -i towel wrist-brace.yml 
+579733  2024/01/23 15:22:49 grep -i cotton wrist-brace.yml 
+579734  2024/01/23 15:24:36 grok q "how does the brace remain attached to the patient's wrist?"
+579735  2024/01/23 15:25:28 grep -i bandage wrist-brace.yml 
+579736  2024/01/23 15:26:51 grok chat wrist-brace.chat "what if i don't have a towel or cotton?"
+579737  2024/01/23 15:27:34 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat
+579738  2024/01/23 15:28:23 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat
+579739  2024/01/23 15:31:04 vi wrist-brace.yml wrist-brace.chat 
+579740  2024/01/23 15:33:03 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -i wrist-brace.yml -o wrist-brace-2.yml
+579741  2024/01/23 15:35:19 vimdiff wrist-brace.yml wrist-brace-2.yml 
+579742  2024/01/23 15:36:17 cp wrist-brace.yml wrist-brace-2.yml 
+579743  2024/01/23 15:36:37 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -i wrist-brace-2.yml -o wrist-brace-2.yml
+579744  2024/01/23 15:06:23 ls -alrt
+579745  2024/01/23 15:06:40 mv -i * ~/lab/cswg/workshops/2024-01-09/IoP-presentation/
+579746  2024/01/23 15:06:55 mv -i .grok* ~/lab/cswg/workshops/2024-01-09/IoP-presentation/
+579747  2024/01/23 15:45:08 cd
+579748  2024/01/23 15:38:42 vimdiff wrist-brace.yml wrist-brace-2.yml 
+579749  2024/01/23 15:39:04 cp wrist-brace.yml wrist-brace-3.yml 
+579750  2024/01/23 15:39:08 grok ls
+579751  2024/01/23 15:39:40 vi wrist-brace.chat
+579752  2024/01/23 15:41:10 cp wrist-brace.yml wrist-brace-2.yml 
+579753  2024/01/23 15:41:16 rm wrist-brace-3.yml 
+579754  2024/01/23 15:41:22 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -i wrist-brace-2.yml -o wrist-brace-2.yml
+579755  2024/01/23 15:42:55 #covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -s "You are a YAML expert.  You have read the contents of  -i wrist-brace-2.yml -o wrist-brace-2.yml
+579756  2024/01/23 15:42:56 ls
+579757  2024/01/23 15:43:04 grok tc < okh-spec.md
+579758  2024/01/23 15:43:53 grok add okh-spec.md
+579759  2024/01/23 15:48:58 grok forget okh-spec.md
+579760  2024/01/23 15:49:02 grok add template.yml 
+579761  2024/01/23 15:50:09 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -s "You are a YAML expert.  You have examined template.yml for the desired output file format."  -i wrist-brace-2.yml,template.yml -o wrist-brace-2.yml
+579762  2024/01/23 15:51:38 vimdiff wrist-brace.yml wrist-brace-2.yml 
+579763  2024/01/23 15:54:38 # covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -s "You are a YAML expert."  -i wrist-brace-2.yml -o wrist-brace-2.yml
+579764  2024/01/23 15:54:42 cp wrist-brace.yml wrist-brace-2.yml 
+579765  2024/01/23 15:54:47 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace.chat -s "You are a YAML expert."  -i wrist-brace-2.yml -o wrist-brace-2.yml
+579766  2024/01/23 15:58:27 vimdiff wrist-brace.yml wrist-brace-2.yml 
+579767  2024/01/23 16:00:02 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace-es.chat -s "You are a YAML expert who is fluent in English and Spanish." 
+579768  2024/01/23 16:02:55 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace-es.chat 
+579769  2024/01/23 16:03:38 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace-es.chat -i wrist-brace.yml 
+579770  2024/01/23 16:09:36 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace-es.chat -o wrist-brace-es.yml
+579771  2024/01/23 16:10:37 vi wrist-brace.chat wrist-brace-es.chat 
+579772  2024/01/23 16:11:04 vi wrist-brace-es.chat wrist-brace-es.yml
+579773  2024/01/23 16:12:51 covi /tmp/$$.chat; cat /tmp/$$.chat | grok chat wrist-brace-es.chat -i wrist-brace.yml 
